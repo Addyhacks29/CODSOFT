@@ -1,0 +1,47 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+
+titanic_df = pd.read_csv('/content/Titanic-Dataset.csv')
+titanic_df['Age'].fillna(titanic_df['Age'].median(), inplace=True)
+titanic_df['Embarked'].fillna(titanic_df['Embarked'].mode()[0], inplace=True)
+
+titanic_df['FamilySize'] = titanic_df['SibSp'] + titanic_df['Parch'] + 1
+titanic_df['IsAlone'] = 0
+titanic_df.loc[titanic_df['FamilySize'] == 1, 'IsAlone'] = 1
+
+titanic_df = pd.get_dummies(titanic_df, columns=['Sex', 'Embarked', 'Pclass'], drop_first=True)
+
+features = ['Age', 'Fare', 'FamilySize', 'IsAlone', 'Sex_male', 'Embarked_Q', 'Embarked_S', 'Pclass_2', 'Pclass_3']
+target = 'Survived'
+
+X = titanic_df[features]
+y = titanic_df[target]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+
+model = LogisticRegression()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Model Accuracy: {accuracy}")
+
+def predict_survival(age, sex, family_size, fare=0.0, embarked='S', pclass=3):
+    is_alone = 1 if family_size == 1 else 0
+    sex_male = 1 if sex.lower() == 'male' else 0
+    embarked_q = 1 if embarked.upper() == 'Q' else 0
+    embarked_s = 1 if embarked.upper() == 'S' else 0
+    pclass_2 = 1 if pclass == 2 else 0
+    pclass_3 = 1 if pclass == 3 else 0
+    
+    input_data = pd.DataFrame([[age, fare, family_size, is_alone, sex_male, embarked_q, embarked_s, pclass_2, pclass_3]],
+                              columns=features)
+    
+    survival_prediction = model.predict(input_data)[0]
+    
+    return "Survived" if survival_prediction == 1 else "Did not survive"
+
+# Example 
+print(predict_survival(age=30, sex='male', family_size=1, fare=10.5, embarked='S', pclass=3))
